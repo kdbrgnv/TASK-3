@@ -1,0 +1,49 @@
+{
+  "file": "/mnt/data/8А16.xlsx",
+  "sheets": [
+    {
+      "sheet": "Sheet1",
+      "rows": 9,
+      "columns": [
+        "Тип контракта",
+        "УН импорт (без пересечения гр)",
+        "Unnamed: 2",
+        "Unnamed: 3",
+        "Unnamed: 4"
+      ],
+      "doc_type_guess": "unknown",
+      "profile": [
+        {
+          "column": "Тип контракта",
+          "inferred_type": "string",
+          "non_null": 2,
+          "sample": "Название файла"
+        },
+        {
+          "column": "УН импорт (без пересечения гр)",
+          "inferred_type": "string",
+          "non_null": 9,
+          "sample": "Реквизиты"
+        },
+        {
+          "column": "Unnamed: 2",
+          "inferred_type": "string",
+          "non_null": 8,
+          "sample": "Расположение"
+        },
+        {
+          "column": "Unnamed: 3",
+          "inferred_type": "string",
+          "non_null": 4,
+          "sample": "Записи в документе клиента, текст"
+        },
+        {
+          "column": "Unnamed: 4",
+          "inferred_type": "string",
+          "non_null": 9,
+          "sample": "Данные "
+        }
+      ]
+    }
+  ]
+}

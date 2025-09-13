@@ -1,0 +1,40 @@
+mapping:
+  'Sheet1':
+    doc_type_guess: unknown
+    candidates:
+      receipt:
+        merchant.name: []
+        merchant.bin: []
+        merchant.address: []
+        merchant.swift_bic: []
+        doc.number: []
+        doc.date: []
+        doc.time: []
+        doc.currency: []
+        totals.subtotal: []
+        totals.vat: []
+        totals.discount: []
+        totals.total: []
+      contract:
+        contract.number: []
+        contract.date: []
+        party_a.name: []
+        party_a.bin_or_iin: []
+        party_a.address: []
+        party_a.iban: []
+        party_a.bic: []
+        terms.amount.value: []
+        terms.amount.currency: []
+        terms.start_date: []
+        terms.end_date: []
+      statement:
+        account.iban: []
+        account.bic: []
+        account.holder: []
+        account.currency: []
+        opening_balance: []
+        closing_balance: []
+        operation.date: []
+        operation.amount: []
+        operation.direction: []
+        operation.counterparty: []

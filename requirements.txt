@@ -1,0 +1,8 @@
+torch>=2.2
+transformers==4.*
+paddleocr>=2.7
+pillow
+numpy
+pymupdf
+streamlit
+openai
