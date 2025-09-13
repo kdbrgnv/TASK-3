@@ -17,7 +17,19 @@ import streamlit as st
 # --- наш пайплайн ---
 from src.pipeline import run_pipeline
 
-st.set_page_config(page_title="OCR2-Banking (Strict)", layout="wide")
+# --- Конфигурация страницы с бело-синей темой ---
+st.set_page_config(
+    page_title="OCR2-Banking (Strict)",
+    layout="wide",
+    theme={
+        "primaryColor": "#0d6efd",            # Основной синий цвет для интерактивных элементов
+        "backgroundColor": "#ffffff",         # Белый фон
+        "secondaryBackgroundColor": "#f0f2f6",# Светло-серый фон для боковой панели и виджетов
+        "textColor": "#262730",               # Темный цвет текста
+        "font": "sans serif"
+    }
+)
+
 st.title("OCR2-Banking — Demo (Donut • PaddleOCR • LLM)")
 
 # инициализация session_state
