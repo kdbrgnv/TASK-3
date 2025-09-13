@@ -1,13 +1,13 @@
 from paddleocr import PaddleOCR
 from PIL import Image
 import numpy as np
-from typing import List, Dict
 
 class PaddleEngine:
     def __init__(self, lang: str = "ru"):
-        self.ocr = PaddleOCR(lang=lang, det=True, rec=True, use_angle_cls=True, show_log=False)
+        # временно без аргументов, чтобы миновать несовместимость
+        self.ocr = PaddleOCR()
 
-    def run(self, img: Image.Image) -> List[Dict]:
+    def run(self, img: Image.Image):
         arr = np.array(img)
         res = self.ocr.ocr(arr, cls=True)
         out = []

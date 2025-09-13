@@ -39,9 +39,9 @@ def run_pipeline(path: str | Path, doc_type_hint: str | None = None):
             donut_guess = dj.get("document_type") or dj.get("doctype")
         draw = ImageDraw.Draw(img2)
         for o in ocr:
-            x1,y1,x2,y2 = o["bbox"]
-            draw.rectangle((x1,y1,x2,y2), outline=(0,255,0), width=1)
-            out_pages.append(img2)
+            x1, y1, x2, y2 = o["bbox"]
+            draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 0), width=1)
+        out_pages.append(img2)  # <-- ДОЛЖНО быть после цикла, а не внутри него
 
     raw_text = " ".join(all_text)
     doc_type = doc_type_hint or donut_guess or "receipt"
