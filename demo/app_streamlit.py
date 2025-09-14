@@ -3,6 +3,7 @@
 import sys, os
 from pathlib import Path
 from typing import Iterable, Tuple, Optional
+from utils.image_tools import safe_crop
 
 CURR_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = CURR_DIR.parent  # корень проекта
@@ -271,7 +272,7 @@ with col1:
     st.markdown("""
     <div class="info-card">
         <h3>📎 Загрузка документа</h3>
-        <p>Поддерживаются форматы: PDF, JPG, PNG. Максимальный размер: 10MB</p>
+        <p>Поддерживаются форматы: PDF, JPG, PNG. Максимальный размер: 200MB</p>
     </div>
     """, unsafe_allow_html=True)
 
