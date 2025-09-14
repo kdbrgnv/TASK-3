@@ -1,0 +1,59 @@
+# src/utils/image_tools.py
+from typing import Sequence, Tuple, Union, Dict
+from PIL import Image
+
+BBox = Union[Sequence[float], Dict[str, float], Sequence[Sequence[float]]]
+
+
+def _points_to_ltrb(pts: Sequence[Sequence[float]]) -> Tuple[int, int, int, int]:
+    xs = [float(p[0]) for p in pts]
+    ys = [float(p[1]) for p in pts]
+    return int(min(xs)), int(min(ys)), int(max(xs)), int(max(ys))
+
+
+def _bbox_to_ltrb(bbox: BBox, img_w: int, img_h: int) -> Tuple[int, int, int, int]:
+    if isinstance(bbox, dict):
+        x = float(bbox.get("x", bbox.get("left", 0)))
+        y = float(bbox.get("y", bbox.get("top", 0)))
+        w = float(bbox.get("w", bbox.get("width", 0)))
+        h = float(bbox.get("h", bbox.get("height", 0)))
+        l, t, r, b = x, y, x + w, y + h
+    elif bbox and isinstance(bbox[0], (list, tuple)) and len(bbox[0]) == 2:
+        l, t, r, b = _points_to_ltrb(bbox)
+    elif isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+        x1, y1, x2, y2 = map(float, bbox)
+        l, t, r, b = x1, y1, x2, y2
+    else:
+        raise ValueError(f"Unsupported bbox format: {bbox}")
+
+    l = max(0, min(int(l), img_w - 1))
+    t = max(0, min(int(t), img_h - 1))
+    r = max(0, min(int(r), img_w))
+    b = max(0, min(int(b), img_h))
+    if r < l:
+        l, r = r, l
+    if b < t:
+        t, b = b, t
+    return l, t, r, b
+
+
+def safe_crop(image: Image.Image, bbox: BBox, expand: int = 2) -> Image.Image | None:
+    """
+    Возвращает обрезанный фрагмент изображения по bbox или None, если рамка некорректна.
+    """
+    if image is None or bbox is None:
+        return None
+    w, h = image.size
+    try:
+        l, t, r, b = _bbox_to_ltrb(bbox, w, h)
+    except Exception:
+        return None
+
+    l = max(0, l - expand)
+    t = max(0, t - expand)
+    r = min(w, r + expand)
+    b = min(h, b + expand)
+
+    if r <= l or b <= t:
+        return None
+    return image.crop((l, t, r, b))

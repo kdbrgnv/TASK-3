@@ -1,0 +1,2 @@
+export GEMINI_MODEL="gemini-2.0-pro"
+export GEMINI_API_KEY="1086078987736"
