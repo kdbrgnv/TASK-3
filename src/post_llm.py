@@ -206,3 +206,71 @@ class LLMClient:
             fields["payer"] = pay.group(1).splitlines()[0].strip()
 
         return fields
+
+    def fix_text(self, full_text: str, fields_hint: Optional[Dict[str, Any]] = None,
+                 language: str = "ru") -> Dict[str, Any]:
+        """
+        Редактура OCR-текста с самопроверкой. Возвращает:
+        {
+          "corrected_text": "....",
+          "edits": [{"from":"...", "to":"...", "reason":"..."}],
+          "notes": "краткий лог (опционально)"
+        }
+        """
+        if not self.enabled:
+            # без LLM просто эхо
+            return {"corrected_text": full_text, "edits": [], "notes": "LLM disabled"}
+
+        schema = {
+            "type": "object",
+            "properties": {
+                "corrected_text": {"type": "string"},
+                "edits": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "from": {"type": "string"},
+                            "to": {"type": "string"},
+                            "reason": {"type": "string"}
+                        },
+                        "required": ["from","to"]
+                    }
+                },
+                "notes": {"type": "string"}
+            },
+            "required": ["corrected_text"]
+        }
+
+        system = (
+            "Ты — редактор финансовых документов (RU/KZ).\n"
+            "Исправляй только OCR-опечатки и склейки/разрывы слов, сохраняя исходный смысл и числа.\n"
+            "Не придумывай новые факты. Не меняй суммы/даты, если они выглядят корректно.\n"
+            "Возвращай ТОЛЬКО JSON по схеме."
+        )
+        hints = fields_hint or {}
+        user = (
+            f"Язык: {language}\n"
+            f"Подсказки полей: {json.dumps(hints, ensure_ascii=False)}\n\n"
+            f"Текст для правки:\n{full_text[:MAX_CTX]}"
+        )
+
+        model_obj = genai.GenerativeModel(self.model_name, system_instruction=system)
+        cfg = {**self.generation_config, "response_schema": schema}
+
+        last_err = None
+        for attempt in range(3):
+            try:
+                resp = model_obj.generate_content([user], generation_config=cfg)
+                txt = (getattr(resp, "text", "") or "").strip()
+                if not txt:
+                    raise ValueError("Empty response")
+                return json.loads(txt)
+            except (ResourceExhausted, GoogleAPIError) as e:
+                last_err = e
+                time.sleep(min(20, 2 ** attempt + random.random()))
+            except Exception as e:
+                last_err = e
+                break
+
+        return {"corrected_text": full_text, "edits": [], "notes": f"error: {str(last_err)[:300]}"}

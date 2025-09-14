@@ -5,7 +5,7 @@ from PIL import Image, ImageEnhance, ImageFilter
 import fitz
 
 
-def pdf_to_images(path: str | Path, dpi: int = 200) -> List[Image.Image]:
+def pdf_to_images(path: str | Path, dpi: int = 300) -> List[Image.Image]:
     """
     Конвертирует PDF в список изображений PIL.Image.
     :param path: путь к PDF-файлу
