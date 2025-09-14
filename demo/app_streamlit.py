@@ -1,25 +1,29 @@
 # demo/app_streamlit.py
-# --- делает импорт из src стабильным вне зависимости от рабочей директории ---
+
 import sys, os
 from pathlib import Path
 from typing import Iterable, Tuple, Optional
 
-CURR_DIR = Path(__file__).resolve().parent  # .../demo
+CURR_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = CURR_DIR.parent  # корень проекта
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
-# --- стандартные импорты ---
 import json
 from io import BytesIO
 from PIL import Image
 import streamlit as st
 
-# --- наш пайплайн ---
 from src.pipeline import run_pipeline
 
+st.set_page_config(
+    page_title="OCR2-Banking Pro",
+    layout="wide",
+    page_icon="🚀",
+    initial_sidebar_state="collapsed"
+)
 
-# ============= СТИЛИЗАЦИЯ =============
+
 def load_css():
     st.markdown("""
     <style>
@@ -176,7 +180,6 @@ def show_header():
         unsafe_allow_html=True
     )
 
-    # Показываем возможности системы
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.markdown("""
@@ -244,23 +247,14 @@ def show_features():
 # ============= ОСНОВНОЕ ПРИЛОЖЕНИЕ =============
 
 # Настройка страницы
-st.set_page_config(
-    page_title="OCR2-Banking Pro",
-    layout="wide",
-    page_icon="🚀",
-    initial_sidebar_state="collapsed"
-)
 
-# Загружаем стили
+
 load_css()
 
-# Показываем красивый заголовок
 show_header()
 
-# Показываем возможности
 show_features()
 
-# инициализация session_state
 if "result" not in st.session_state:
     st.session_state.result = None
 if "pages" not in st.session_state:
@@ -268,11 +262,9 @@ if "pages" not in st.session_state:
 if "processing" not in st.session_state:
     st.session_state.processing = False
 
-# ============= ОСНОВНОЙ ИНТЕРФЕЙС =============
 
 st.markdown("---")
 
-# Секция загрузки файла
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -303,13 +295,11 @@ with col2:
         help="Выбор типа помогает системе лучше извлекать релевантные поля"
     )
 
-    # Дополнительные настройки
     with st.expander("🔧 Расширенные настройки"):
         confidence_threshold = st.slider("Порог уверенности OCR", 0.5, 1.0, 0.8, 0.05)
         enable_postprocessing = st.checkbox("Включить постобработку", value=True)
         extract_tables = st.checkbox("Извлекать таблицы", value=False)
 
-# Кнопка обработки
 if f:
     if not st.session_state.processing:
         process_button = st.button("🚀 Обработать документ", type="primary", use_container_width=True)
@@ -320,18 +310,15 @@ else:
     st.info("👆 Загрузите файл для начала обработки")
     process_button = False
 
-# Обработка файла
 if process_button and f and not st.session_state.processing:
     st.session_state.processing = True
 
-    # Создаем временный файл
     tmp = PROJECT_ROOT / "tmp_upload" / f.name
     tmp.parent.mkdir(parents=True, exist_ok=True)
     tmp.write_bytes(f.read())
 
     hint = None if doc_type == "auto" else doc_type
 
-    # Прогресс бар с этапами
     progress_bar = st.progress(0)
     status_text = st.empty()
 
@@ -345,7 +332,6 @@ if process_button and f and not st.session_state.processing:
         status_text.text("🔍 Распознавание текста (OCR)...")
         progress_bar.progress(60)
 
-        # Основная обработка
         result, pages = run_pipeline(tmp, hint)
 
         status_text.text("⚙️ Постобработка и извлечение полей...")
@@ -354,16 +340,13 @@ if process_button and f and not st.session_state.processing:
         status_text.text("✅ Завершение обработки...")
         progress_bar.progress(100)
 
-        # Сохраняем результаты
         st.session_state.result = result
         st.session_state.pages = pages
         st.session_state.processing = False
 
-        # Убираем прогресс бар
         progress_bar.empty()
         status_text.empty()
 
-        # Показываем успех
         st.markdown("""
         <div class="success-card">
             <h3>🎉 Документ успешно обработан!</h3>
@@ -377,203 +360,201 @@ if process_button and f and not st.session_state.processing:
         status_text.empty()
         st.error(f"❌ Ошибка при обработке: {str(e)}")
 
-# Показываем результаты только если они есть
 if st.session_state.result and not st.session_state.processing:
     st.markdown("---")
     st.markdown("## 📊 Результаты обработки")
 
-    # Краткая статистика
     result = st.session_state.result
     fields_count = len(result.get("fields", {}))
     text_length = len(result.get("text", ""))
-    line_items_count = len(result.get("lineItems", []))
+    if st.session_state.result is not None and not st.session_state.processing:
+        st.markdown("---")
+        st.markdown("## 📊 Результаты обработки")
 
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Извлечено полей", fields_count, help="Количество извлеченных ключевых полей")
-    with col2:
-        st.metric("Символов текста", text_length, help="Общее количество распознанных символов")
-    with col3:
-        st.metric("Строк в таблицах", line_items_count, help="Количество строк в извлеченных таблицах")
-    with col4:
-        avg_conf = 0.95  # Это можно вычислить из debug данных
-        st.metric("Средняя уверенность", f"{avg_conf:.1%}", help="Средняя уверенность распознавания OCR")
-
-    # ======= Основные результаты =======
-    tab1, tab2, tab3, tab4 = st.tabs(["📄 Предпросмотр", "📋 Данные", "🔍 Инспектор", "⬇️ Экспорт"])
-
-    with tab1:
-        st.subheader("Страницы документа")
-        if st.session_state.pages:
-            cols = st.columns(min(3, len(st.session_state.pages)))
-            for i, page in enumerate(st.session_state.pages):
-                with cols[i % len(cols)]:
-                    st.image(page, caption=f"Страница {i + 1}", use_column_width=True)
-        else:
-            st.info("Изображения страниц не доступны")
-
-    with tab2:
-        col1, col2 = st.columns([1, 1])
-
-        with col1:
-            st.subheader("🔑 Ключевые поля")
-            fields = result.get("fields", {})
-            if fields:
-                for key, value in fields.items():
-                    st.text(f"{key}: {value}")
-            else:
-                st.info("Ключевые поля не найдены")
-
-        with col2:
-            st.subheader("📄 JSON результат")
-            st.code(
-                json.dumps(result, ensure_ascii=False, indent=2),
-                language="json"
-            )
-
-    with tab3:
-        # SPY функциональность
+        result = st.session_state.result or {}
         pages = st.session_state.pages or []
-        debug = result.get("debug", {})
-        ocr_pages = debug.get("ocr", [])
 
-        if not pages or not ocr_pages:
-            st.info("🔍 Данные для детального анализа недоступны")
-        else:
-            col1, col2 = st.columns([1, 1])
+        # Метрики с безопасными значениями по умолчанию
+        fields = result.get("fields") or {}
+        text = result.get("text") or ""
+        line_items = result.get("lineItems") or []
 
-            with col1:
-                page_idx = st.number_input(
-                    "Выберите страницу",
-                    min_value=1,
-                    max_value=len(pages),
-                    value=1,
-                    help="Выберите страницу для детального анализа OCR"
-                )
+        fields_count = len(fields)
+        text_length = len(text)
+        line_items_count = len(line_items)
 
-                ocr_items = ocr_pages[min(page_idx - 1, len(ocr_pages) - 1)] or []
-                if ocr_items:
-                    options = [
-                        f"{i}: {o['text'][:30]}... (conf={o.get('conf', 0):.2f})"
-                        for i, o in enumerate(ocr_items)
-                    ]
-                    sel = st.selectbox("OCR элемент", options, index=0)
+        col1m, col2m, col3m, col4m = st.columns(4)
+        with col1m:
+            st.metric("Извлечено полей", fields_count, help="Количество извлеченных ключевых полей")
+        with col2m:
+            st.metric("Символов текста", text_length, help="Общее количество распознанных символов")
+        with col3m:
+            st.metric("Строк в таблицах", line_items_count, help="Количество строк в извлеченных таблицах")
+        with col4m:
+            avg_conf = 0.95  # TODO: подставить реальную метрику при наличии
+            st.metric("Средняя уверенность", f"{avg_conf:.1%}", help="Средняя уверенность распознавания OCR")
 
-                    if sel:
-                        i = int(sel.split(":", 1)[0])
-                        item = ocr_items[i]
+        tab1, tab2, tab3, tab4 = st.tabs(["📄 Предпросмотр", "📋 Данные", "🔍 Инспектор", "⬇️ Экспорт"])
 
-                        # Информация об элементе
-                        st.markdown("**Детали элемента:**")
-                        st.text(f"Текст: {item['text']}")
-                        st.text(f"Уверенность: {item.get('conf', 0):.3f}")
-                        st.text(f"Координаты: {item['bbox']}")
-
-            with col2:
-                if ocr_items and sel:
-                    try:
-                        i = int(sel.split(":", 1)[0])
-                        bbox = ocr_items[i]["bbox"]
-                        page_img = pages[page_idx - 1]
-                        crop = safe_crop(page_img, bbox)
-                        if crop is None:
-                            st.warning("Невалидный bbox для кропа")
-                        else:
-                            st.markdown("**Фрагмент изображения:**")
-                            st.image(crop, caption=f"Область: {normalize_bbox(bbox)}")
-
-                        st.markdown("**Фрагмент изображения:**")
-                        st.image(crop, caption=f"Область: [{x1},{y1},{x2},{y2}]")
-                    except Exception as e:
-                        st.error(f"Ошибка при обрезке изображения: {e}")
-
-    with tab4:
-        st.subheader("📥 Экспорт результатов")
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            # JSON экспорт
-            js = json.dumps(result, ensure_ascii=False, indent=2)
-            st.download_button(
-                "📄 Скачать JSON",
-                data=js.encode("utf-8"),
-                file_name=f"ocr2_result_{doc_type}.json",
-                mime="application/json",
-                use_container_width=True
-            )
-
-            # Экспорт полей как CSV
-            if result.get("fields"):
-                import io, csv
-
-                s = io.StringIO()
-                writer = csv.writer(s)
-                writer.writerow(["Поле", "Значение"])
-                for k, v in result["fields"].items():
-                    writer.writerow([k, v])
-
-                st.download_button(
-                    "📊 Скачать поля (CSV)",
-                    data=s.getvalue().encode("utf-8"),
-                    file_name=f"fields_{doc_type}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
-
-        with col2:
-            # Экспорт строк таблиц
-            items = result.get("lineItems", [])
-            if items:
-                import io, csv
-
-                s = io.StringIO()
-                fieldnames = sorted({k for it in items for k in it.keys()})
-                w = csv.DictWriter(s, fieldnames=fieldnames)
-                w.writeheader()
-                for it in items:
-                    w.writerow(it)
-
-                st.download_button(
-                    "📋 Скачать таблицы (CSV)",
-                    data=s.getvalue().encode("utf-8"),
-                    file_name=f"line_items_{doc_type}.csv",
-                    mime="text/csv",
-                    use_container_width=True
-                )
+        # -------- TAB 1: Предпросмотр --------
+        with tab1:
+            st.subheader("Страницы документа")
+            if pages:
+                cols = st.columns(min(3, len(pages)))
+                for i, page in enumerate(pages):
+                    with cols[i % len(cols)]:
+                        st.image(page, caption=f"Страница {i + 1}", use_column_width=True)
             else:
-                st.info("Табличные данные не обнаружены")
+                st.info("Изображения страниц не доступны")
 
-    # ======= Редактирование полей =======
-    with st.expander("✏️ Редактировать извлеченные поля", expanded=False):
-        st.write("Отредактируйте ключевые поля перед экспортом:")
+        # -------- TAB 2: Данные --------
+        with tab2:
+            c1, c2 = st.columns([1, 1])
+            with c1:
+                st.subheader("🔑 Ключевые поля")
+                if fields:
+                    for key, value in fields.items():
+                        st.text(f"{key}: {value}")
+                else:
+                    st.info("Ключевые поля не найдены")
 
-        fields = result.get("fields", {}) or {}
-        data = [
-            {"key": k, "value": "" if v is None else v}
-            for k, v in fields.items()
-        ]
+            with c2:
+                st.subheader("📄 JSON результат")
+                st.code(json.dumps(result, ensure_ascii=False, indent=2), language="json")
 
-        edited = st.data_editor(
-            data,
-            num_rows="dynamic",
-            use_container_width=True,
-            key="fields_editor",
-            column_config={
-                "key": st.column_config.TextColumn("Поле", help="Название поля"),
-                "value": st.column_config.TextColumn("Значение", help="Значение поля"),
-            }
-        )
+        # -------- TAB 3: Инспектор --------
+        with tab3:
+            debug = result.get("debug") or {}
+            ocr_pages = debug.get("ocr") or []
 
-        if st.button("💾 Применить изменения", type="secondary"):
-            new_fields = {}
-            for row in edited:
-                k = str(row.get("key", "")).strip()
-                if k:
-                    new_fields[k] = row.get("value", "")
-            st.session_state.result["fields"] = new_fields
-            st.success("✅ Поля успешно обновлены!")
-            st.rerun()
+            if not pages or not ocr_pages:
+                st.info("🔍 Данные для детального анализа недоступны")
+            else:
+                lc, rc = st.columns([1, 1])
+
+                sel = None  # индекс выбранного OCR-элемента
+                ocr_items = []  # элементы на выбранной странице
+
+                with lc:
+                    page_idx = st.number_input(
+                        "Выберите страницу",
+                        min_value=1,
+                        max_value=len(pages),
+                        value=1,
+                        help="Выберите страницу для детального анализа OCR"
+                    )
+                    # Безопасно берём список OCR-элементов для этой страницы
+                    page_pos = min(max(page_idx - 1, 0), len(ocr_pages) - 1)
+                    ocr_items = (ocr_pages[page_pos] or []) if ocr_pages else []
+
+                    if ocr_items:
+                        options = [
+                            f"{i}: {str(o.get('text', ''))[:30]}... (conf={float(o.get('conf', o.get('score', 0.0))):.2f})"
+                            for i, o in enumerate(ocr_items)
+                        ]
+                        sel_opt = st.selectbox("OCR элемент", options, index=0)
+                        if sel_opt:
+                            sel = int(sel_opt.split(":", 1)[0])
+
+                        if sel is not None:
+                            item = ocr_items[sel]
+                            st.markdown("**Детали элемента:**")
+                            st.text(f"Текст: {item.get('text', '')}")
+                            st.text(f"Уверенность: {float(item.get('conf', item.get('score', 0.0))):.3f}")
+                            st.text(f"Координаты: {item.get('bbox')}")
+
+                with rc:
+                    if ocr_items and sel is not None:
+                        try:
+                            item = ocr_items[sel]
+                            bbox = item.get("bbox")
+                            page_img = pages[page_pos]
+                            # safe_crop должен принимать (image, [x1,y1,x2,y2])
+                            crop = safe_crop(page_img, bbox) if bbox else None
+                            if crop is None:
+                                st.warning("Невалидный bbox для кропа")
+                            else:
+                                st.markdown("**Фрагмент изображения:**")
+                                st.image(crop, caption=f"bbox: {bbox}")
+                        except Exception as e:
+                            st.error(f"Ошибка при обрезке изображения: {e}")
+
+        # -------- TAB 4: Экспорт --------
+        with tab4:
+            st.subheader("📥 Экспорт результатов")
+
+            ec1, ec2 = st.columns(2)
+            with ec1:
+                js = json.dumps(result, ensure_ascii=False, indent=2)
+                st.download_button(
+                    "📄 Скачать JSON",
+                    data=js.encode("utf-8"),
+                    file_name=f"ocr2_result_{doc_type}.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+
+                if fields:
+                    import io, csv
+
+                    s = io.StringIO()
+                    writer = csv.writer(s)
+                    writer.writerow(["Поле", "Значение"])
+                    for k, v in fields.items():
+                        writer.writerow([k, v])
+                    st.download_button(
+                        "📊 Скачать поля (CSV)",
+                        data=s.getvalue().encode("utf-8"),
+                        file_name=f"fields_{doc_type}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+
+            with ec2:
+                items = line_items
+                if items:
+                    import io, csv
+
+                    s = io.StringIO()
+                    fieldnames = sorted({k for it in items for k in it.keys()})
+                    w = csv.DictWriter(s, fieldnames=fieldnames)
+                    w.writeheader()
+                    for it in items:
+                        w.writerow(it)
+                    st.download_button(
+                        "📋 Скачать таблицы (CSV)",
+                        data=s.getvalue().encode("utf-8"),
+                        file_name=f"line_items_{doc_type}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
+                else:
+                    st.info("Табличные данные не обнаружены")
+
+        # ======= Редактирование полей =======
+        with st.expander("✏️ Редактировать извлеченные поля", expanded=False):
+            st.write("Отредактируйте ключевые поля перед экспортом:")
+            data = [{"key": k, "value": "" if v is None else v} for k, v in (fields.items() if fields else [])]
+            edited = st.data_editor(
+                data,
+                num_rows="dynamic",
+                use_container_width=True,
+                key="fields_editor",
+                column_config={
+                    "key": st.column_config.TextColumn("Поле", help="Название поля"),
+                    "value": st.column_config.TextColumn("Значение", help="Значение поля"),
+                }
+            )
+            if st.button("💾 Применить изменения", type="secondary"):
+                new_fields = {}
+                for row in edited:
+                    k = str(row.get("key", "")).strip()
+                    if k:
+                        new_fields[k] = row.get("value", "")
+                st.session_state.result = {**result, "fields": new_fields}
+                st.success("✅ Поля успешно обновлены!")
+                st.rerun()
+
 
 elif not st.session_state.processing:
     # Показываем placeholder когда нет результатов
