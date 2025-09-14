@@ -3,21 +3,25 @@ import cv2
 import numpy as np
 from PIL import Image
 
-def preprocess_for_ocr(pil: Image.Image, *,
-                       target_max_side: int = 1280,
-                       use_clahe: bool = True,
-                       do_unsharp: bool = True,
-                       invert_if_needed: bool = True,
-                       add_padding: int = 8,
-                       return_rgb: bool = True) -> Image.Image:
+
+def preprocess_for_ocr(
+    pil: Image.Image,
+    *,
+    target_max_side: int = 1280,
+    use_clahe: bool = True,
+    do_unsharp: bool = True,
+    invert_if_needed: bool = True,
+    add_padding: int = 8,
+    return_rgb: bool = True,
+) -> Image.Image:
     """
-    Готовит изображение для OCR:
+    Подготавливает изображение для OCR:
     - grayscale + CLAHE
     - адаптивная бинаризация
-    - лёгкая морфология
-    - масшт. до target_max_side (ап/даун)
-    - авто-инверт фона при необходимости
-    - небольшой белый паддинг
+    - морфологическая очистка
+    - масштабирование до target_max_side
+    - авто-инверсия при необходимости
+    - паддинг
     - возврат PIL.Image (RGB по умолчанию)
     """
     img_bgr = cv2.cvtColor(np.array(pil), cv2.COLOR_RGB2BGR)
@@ -30,8 +34,12 @@ def preprocess_for_ocr(pil: Image.Image, *,
     gray = cv2.bilateralFilter(gray, d=5, sigmaColor=25, sigmaSpace=25)
 
     bw = cv2.adaptiveThreshold(
-        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY, 31, 10
+        gray,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        31,
+        10,
     )
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
@@ -53,8 +61,13 @@ def preprocess_for_ocr(pil: Image.Image, *,
 
     if add_padding > 0:
         bw = cv2.copyMakeBorder(
-            bw, add_padding, add_padding, add_padding, add_padding,
-            borderType=cv2.BORDER_CONSTANT, value=255
+            bw,
+            add_padding,
+            add_padding,
+            add_padding,
+            add_padding,
+            borderType=cv2.BORDER_CONSTANT,
+            value=255,
         )
 
     if do_unsharp:
@@ -62,7 +75,5 @@ def preprocess_for_ocr(pil: Image.Image, *,
         bw = cv2.addWeighted(bw, 1.5, blur, -0.5, 0)
 
     if return_rgb:
-        rgb = cv2.cvtColor(bw, cv2.COLOR_GRAY2RGB)
-        return Image.fromarray(rgb)
-    else:
-        return Image.fromarray(bw)
+        return Image.fromarray(cv2.cvtColor(bw, cv2.COLOR_GRAY2RGB))
+    return Image.fromarray(bw)
